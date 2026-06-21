@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Rider Dashboard - CampusParcel{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3><i class="bi bi-bicycle"></i> Rider Dashboard</h3>
+    <form method="POST" action="{{ url_for('toggle_availability') }}">
+        <button type="submit" class="btn {% if is_available %}btn-success{% else %}btn-secondary{% endif %}">
+            <i class="bi bi-circle-fill {% if is_available %}text-light{% endif %}"></i>
+            {{ 'Online' if is_available else 'Offline' }} &mdash; tap to toggle
+        </button>
+    </form>
+</div>
+
+<h5 class="mt-4">My Active Deliveries</h5>
+{% if active_orders %}
+<div class="table-responsive mb-4">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Parcel</th><th>Sender</th><th>Pickup → Drop</th><th>Fare</th><th>Status</th><th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in active_orders %}
+            <tr>
+                <td>{{ order.parcel_title }}</td>
+                <td>{{ order.sender_name }}<br><small class="text-muted">{{ order.sender_phone }}</small></td>
+                <td>
+                    <small>{{ order.pickup_address[:25] }}...</small><br>
+                    <small class="text-muted">→ {{ order.drop_address[:25] }}...</small>
+                </td>
+                <td>₹{{ order.total_fare }}</td>
+                <td><span class="badge bg-warning text-dark">{{ order.status.replace('_',' ')|title }}</span></td>
+                <td><a href="{{ url_for('order_detail', order_id=order.id) }}" class="btn btn-sm btn-primary">Continue</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">You have no active deliveries right now.</div>
+{% endif %}
+
+<h5 class="mt-4">Available Orders Nearby</h5>
+{% if not is_available %}
+    <div class="alert alert-warning">You're offline. Go online to see and accept new orders.</div>
+{% elif available_orders %}
+<div class="row g-3">
+    {% for order in available_orders %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="card-title">{{ order.parcel_title }}
+                    <span class="badge bg-light text-dark border">{{ order.parcel_size }}</span>
+                </h6>
+                <p class="mb-1"><i class="bi bi-geo-alt-fill text-success"></i> {{ order.pickup_address }}</p>
+                <p class="mb-1"><i class="bi bi-geo-alt-fill text-danger"></i> {{ order.drop_address }}</p>
+                <p class="mb-1 text-muted small">{{ order.distance_km }} km away</p>
+                <p class="mb-2"><strong>Fare: ₹{{ order.total_fare }}</strong></p>
+                <form method="POST" action="{{ url_for('accept_order', order_id=order.id) }}">
+                    <button type="submit" class="btn btn-success w-100">Accept Order</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">No orders waiting right now. Check back soon!</div>
+{% endif %}
+{% endblock %}

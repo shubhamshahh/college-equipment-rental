@@ -1,0 +1,28 @@
+body {
+    background-color: #f5f7fa;
+}
+
+.map-box {
+    height: 250px;
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.timeline li {
+    border-left: 2px solid #198754;
+    padding-left: 12px;
+    margin-left: 6px;
+}
+
+.timeline li:last-child {
+    border-left: 2px solid transparent;
+}
+
+.card {
+    border-radius: 10px;
+}
+
+footer {
+    margin-top: auto;
+}

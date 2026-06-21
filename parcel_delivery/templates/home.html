@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}CampusParcel - Send Anything, Anywhere on Campus{% endblock %}
+
+{% block content %}
+<div class="px-4 py-5 my-3 text-center bg-dark text-white rounded-3 shadow">
+    <i class="bi bi-box-seam-fill display-3 text-warning"></i>
+    <h1 class="display-5 fw-bold mt-2">Send any parcel, anywhere on campus</h1>
+    <p class="col-lg-7 mx-auto fs-5 text-light-emphasis">
+        Books, lab equipment, documents, tiffins, gadgets &mdash; CampusParcel connects
+        senders with nearby riders for fast pickup-to-drop delivery within your college or school.
+    </p>
+    <div class="d-flex justify-content-center gap-2 mt-3">
+        <a href="{{ url_for('register') }}" class="btn btn-warning btn-lg text-dark fw-semibold">Get Started</a>
+        <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg">Login</a>
+    </div>
+</div>
+
+<div class="row g-4 mt-4">
+    <div class="col-md-4">
+        <div class="card h-100 text-center shadow-sm border-0">
+            <div class="card-body">
+                <i class="bi bi-geo-alt-fill fs-1 text-primary"></i>
+                <h5 class="mt-3">Pin Pickup & Drop</h5>
+                <p class="text-muted">Choose exact pickup and drop locations on the map &mdash; any hostel, classroom, or gate on campus.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 text-center shadow-sm border-0">
+            <div class="card-body">
+                <i class="bi bi-bicycle fs-1 text-success"></i>
+                <h5 class="mt-3">Nearby Riders</h5>
+                <p class="text-muted">A rider accepts your order, picks up your parcel, and delivers it &mdash; tracked every step of the way.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 text-center shadow-sm border-0">
+            <div class="card-body">
+                <i class="bi bi-shield-check fs-1 text-danger"></i>
+                <h5 class="mt-3">OTP Verified</h5>
+                <p class="text-muted">Pickup and drop are both OTP-verified, so your parcel only changes hands with the right person.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

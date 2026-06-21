@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Send a Parcel - CampusParcel{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-9">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h3 class="card-title mb-3"><i class="bi bi-box-seam"></i> Send a Parcel</h3>
+                <form method="POST" id="parcelForm">
+                    <h6 class="text-muted mb-2">PARCEL DETAILS</h6>
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">What are you sending?</label>
+                            <input type="text" name="parcel_title" class="form-control" placeholder="e.g. Lab Kit, Documents, Tiffin Box" required>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Size</label>
+                            <select name="parcel_size" class="form-select">
+                                <option value="small">Small (fits in a bag)</option>
+                                <option value="medium">Medium (box/backpack)</option>
+                                <option value="large">Large (needs both hands)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description (optional)</label>
+                        <textarea name="parcel_description" class="form-control" rows="2" placeholder="Any handling instructions, fragile items, etc."></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Receiver's Name</label>
+                            <input type="text" name="receiver_name" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Receiver's Phone</label>
+                            <input type="text" name="receiver_phone" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <h6 class="text-muted mb-2"><i class="bi bi-geo-alt-fill text-success"></i> PICKUP LOCATION</h6>
+                    <div class="mb-3">
+                        <input type="text" id="pickup_address" name="pickup_address" class="form-control mb-2" placeholder="Search pickup address (hostel, building, gate...)" required>
+                        <div id="pickup_map" class="map-box"></div>
+                        <input type="hidden" name="pickup_lat" id="pickup_lat">
+                        <input type="hidden" name="pickup_lng" id="pickup_lng">
+                    </div>
+
+                    <h6 class="text-muted mb-2"><i class="bi bi-geo-alt-fill text-danger"></i> DROP LOCATION</h6>
+                    <div class="mb-3">
+                        <input type="text" id="drop_address" name="drop_address" class="form-control mb-2" placeholder="Search drop address (hostel, building, gate...)" required>
+                        <div id="drop_map" class="map-box"></div>
+                        <input type="hidden" name="drop_lat" id="drop_lat">
+                        <input type="hidden" name="drop_lng" id="drop_lng">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Notes for the rider (optional)</label>
+                        <textarea name="notes" class="form-control" rows="2" placeholder="e.g. Call on arrival, leave at security desk..."></textarea>
+                    </div>
+
+                    <div class="alert alert-light border" id="fareSummary">
+                        <p class="mb-1">Distance: <strong id="distanceVal">0.0 km</strong></p>
+                        <p class="mb-1">Base Fee: <strong>₹{{ "%.2f"|format(BASE_FEE) }}</strong></p>
+                        <p class="mb-1">Distance Fee (₹{{ RATE_PER_KM }}/km): <strong id="distFeeVal">₹0.00</strong></p>
+                        <hr class="my-1">
+                        <p class="mb-0">Estimated Total Fare: <strong id="totalFareVal">₹{{ "%.2f"|format(BASE_FEE) }}</strong></p>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 btn-lg">
+                        <i class="bi bi-send-fill"></i> Place Order
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const BASE_FEE = {{ BASE_FEE }};
+const RATE_PER_KM = {{ RATE_PER_KM }};
+const center = { lat: {{ DEFAULT_LAT }}, lng: {{ DEFAULT_LNG }} };
+
+let pickupCoords = null;
+let dropCoords = null;
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 +
+              Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+              Math.sin(dLng/2)**2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+function updateFare() {
+    if (!pickupCoords || !dropCoords) return;
+    const dist = haversineKm(pickupCoords.lat, pickupCoords.lng, dropCoords.lat, dropCoords.lng);
+    const distFee = dist * RATE_PER_KM;
+    const total = BASE_FEE + distFee;
+
+    document.getElementById('distanceVal').innerText = dist.toFixed(2) + ' km';
+    document.getElementById('distFeeVal').innerText = '₹' + distFee.toFixed(2);
+    document.getElementById('totalFareVal').innerText = '₹' + total.toFixed(2);
+}
+
+function setupLocationPicker(mapId, addressInputId, latFieldId, lngFieldId, markerColor, onUpdate) {
+    const map = new google.maps.Map(document.getElementById(mapId), {
+        center: center,
+        zoom: 16,
+    });
+
+    const marker = new google.maps.Marker({
+        map: map,
+        position: center,
+        draggable: true,
+        icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 9,
+            fillColor: markerColor,
+            fillOpacity: 1,
+            strokeColor: "#ffffff",
+            strokeWeight: 2,
+        },
+    });
+
+    const latInput = document.getElementById(latFieldId);
+    const lngInput = document.getElementById(lngFieldId);
+    const addressInput = document.getElementById(addressInputId);
+
+    function setFromLatLng(latLng) {
+        const coords = { lat: latLng.lat(), lng: latLng.lng() };
+        latInput.value = coords.lat;
+        lngInput.value = coords.lng;
+        marker.setPosition(latLng);
+        map.panTo(latLng);
+        onUpdate(coords);
+        updateFare();
+    }
+
+    setFromLatLng(new google.maps.LatLng(center.lat, center.lng));
+
+    map.addListener("click", (e) => setFromLatLng(e.latLng));
+    marker.addListener("dragend", () => setFromLatLng(marker.getPosition()));
+
+    const autocomplete = new google.maps.places.Autocomplete(addressInput);
+    autocomplete.bindTo("bounds", map);
+    autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry) return;
+        setFromLatLng(place.geometry.location);
+        map.setZoom(17);
+    });
+
+    return map;
+}
+
+function initMaps() {
+    setupLocationPicker("pickup_map", "pickup_address", "pickup_lat", "pickup_lng", "#198754", (c) => pickupCoords = c);
+    setupLocationPicker("drop_map", "drop_address", "drop_lat", "drop_lng", "#dc3545", (c) => dropCoords = c);
+}
+</script>
+<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&libraries=places&callback=initMaps">
+</script>
+{% endblock %}

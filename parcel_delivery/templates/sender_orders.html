@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}My Orders - CampusParcel{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>My Parcel Orders</h3>
+    <a href="{{ url_for('send_parcel') }}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Send New Parcel</a>
+</div>
+
+{% if orders %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Parcel</th>
+                <th>Pickup → Drop</th>
+                <th>Distance</th>
+                <th>Fare</th>
+                <th>Rider</th>
+                <th>Status</th>
+                <th>Ref</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>{{ order.parcel_title }}</td>
+                <td>
+                    <small>{{ order.pickup_address[:25] }}{% if order.pickup_address|length > 25 %}...{% endif %}</small><br>
+                    <small class="text-muted">→ {{ order.drop_address[:25] }}{% if order.drop_address|length > 25 %}...{% endif %}</small>
+                </td>
+                <td>{{ order.distance_km }} km</td>
+                <td>₹{{ order.total_fare }}</td>
+                <td>{{ order.rider_name or '—' }}</td>
+                <td>
+                    <span class="badge
+                        {% if order.status == 'pending' %}bg-secondary
+                        {% elif order.status == 'delivered' %}bg-success
+                        {% elif order.status == 'cancelled' %}bg-danger
+                        {% else %}bg-warning text-dark{% endif %}">
+                        {{ order.status.replace('_',' ')|title }}
+                    </span>
+                </td>
+                <td><small>{{ order.order_ref }}</small></td>
+                <td><a href="{{ url_for('order_detail', order_id=order.id) }}" class="btn btn-sm btn-outline-primary">Track</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">You haven't sent any parcels yet.</div>
+{% endif %}
+{% endblock %}

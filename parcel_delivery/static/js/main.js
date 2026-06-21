@@ -1,0 +1,8 @@
+document.addEventListener("DOMContentLoaded", function () {
+    setTimeout(function () {
+        document.querySelectorAll(".alert").forEach(function (alert) {
+            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+            if (bsAlert) bsAlert.close();
+        });
+    }, 5000);
+});

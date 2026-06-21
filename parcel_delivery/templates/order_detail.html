@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Order {{ order.order_ref }} - CampusParcel{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-md-7">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h4>{{ order.parcel_title }}</h4>
+                        <small class="text-muted">Ref: {{ order.order_ref }}</small>
+                    </div>
+                    <span class="badge fs-6
+                        {% if order.status == 'pending' %}bg-secondary
+                        {% elif order.status == 'delivered' %}bg-success
+                        {% elif order.status == 'cancelled' %}bg-danger
+                        {% else %}bg-warning text-dark{% endif %}">
+                        {{ order.status.replace('_',' ')|title }}
+                    </span>
+                </div>
+
+                <hr>
+                <p class="mb-1"><i class="bi bi-geo-alt-fill text-success"></i> <strong>Pickup:</strong> {{ order.pickup_address }}</p>
+                <p class="mb-1"><i class="bi bi-geo-alt-fill text-danger"></i> <strong>Drop:</strong> {{ order.drop_address }}</p>
+                <p class="mb-1"><strong>Receiver:</strong> {{ order.receiver_name }} ({{ order.receiver_phone }})</p>
+                {% if order.parcel_description %}
+                    <p class="mb-1"><strong>Description:</strong> {{ order.parcel_description }}</p>
+                {% endif %}
+                {% if order.notes %}
+                    <p class="mb-1"><strong>Notes:</strong> {{ order.notes }}</p>
+                {% endif %}
+
+                <hr>
+                <div class="row">
+                    <div class="col-6"><strong>Distance:</strong> {{ order.distance_km }} km</div>
+                    <div class="col-6"><strong>Base Fee:</strong> ₹{{ order.base_fee }}</div>
+                    <div class="col-6"><strong>Distance Fee:</strong> ₹{{ order.distance_fee }}</div>
+                    <div class="col-6"><strong>Total Fare:</strong> ₹{{ order.total_fare }}</div>
+                </div>
+
+                {% if order.rider_name %}
+                    <hr>
+                    <p class="mb-1"><i class="bi bi-bicycle"></i> <strong>Rider:</strong> {{ order.rider_name }} ({{ order.rider_phone }})</p>
+                    {% if order.vehicle_type %}
+                        <p class="mb-0 text-muted small">{{ order.vehicle_type|capitalize }}{% if order.vehicle_number %} &middot; {{ order.vehicle_number }}{% endif %}</p>
+                    {% endif %}
+                {% else %}
+                    <hr>
+                    <p class="text-muted mb-0"><i class="bi bi-hourglass-split"></i> Waiting for a rider to accept this order...</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- OTPs: only visible to sender (and rider needs entry, not viewing) -->
+        {% if session.role == 'sender' %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6>Verification Codes</h6>
+                <p class="mb-1">Share <strong>Pickup OTP</strong> with the rider when they collect the parcel: <span class="badge bg-dark fs-6">{{ order.pickup_otp }}</span></p>
+                <p class="mb-0">Share <strong>Drop OTP</strong> with the receiver to confirm delivery: <span class="badge bg-dark fs-6">{{ order.drop_otp }}</span></p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if order.qr_code and session.role == 'sender' %}
+        <div class="card shadow-sm mb-3 text-center">
+            <div class="card-body">
+                <h6>Order QR Code</h6>
+                <img src="{{ url_for('static', filename='uploads/qrcodes/' + order.qr_code) }}" style="max-width:160px;">
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Rider controls -->
+        {% if session.role == 'rider' and order.rider_id == session.user_id and order.status not in ['delivered','cancelled'] %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6>Update Delivery Status</h6>
+                {% set next_map = {
+                    'accepted': 'arrived_pickup',
+                    'arrived_pickup': 'picked_up',
+                    'picked_up': 'in_transit',
+                    'in_transit': 'arrived_drop',
+                    'arrived_drop': 'delivered'
+                } %}
+                {% set next_status = next_map.get(order.status) %}
+                {% if next_status %}
+                <form method="POST" action="{{ url_for('advance_order', order_id=order.id) }}">
+                    <input type="hidden" name="next_status" value="{{ next_status }}">
+                    {% if next_status == 'picked_up' %}
+                        <div class="mb-2">
+                            <label class="form-label">Enter Pickup OTP (ask the sender)</label>
+                            <input type="text" name="otp" class="form-control" maxlength="6" required>
+                        </div>
+                    {% elif next_status == 'delivered' %}
+                        <div class="mb-2">
+                            <label class="form-label">Enter Drop OTP (ask the receiver)</label>
+                            <input type="text" name="otp" class="form-control" maxlength="6" required>
+                        </div>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary w-100">
+                        Mark as "{{ next_status.replace('_',' ')|title }}"
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if session.role == 'sender' and order.status == 'delivered' %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6>Rate Your Rider</h6>
+                <form method="POST" action="{{ url_for('add_review', order_id=order.id) }}">
+                    <select name="rating" class="form-select w-auto mb-2" required>
+                        <option value="5">★★★★★ (5)</option>
+                        <option value="4">★★★★☆ (4)</option>
+                        <option value="3">★★★☆☆ (3)</option>
+                        <option value="2">★★☆☆☆ (2)</option>
+                        <option value="1">★☆☆☆☆ (1)</option>
+                    </select>
+                    <textarea name="comment" class="form-control mb-2" rows="2" placeholder="Optional feedback..."></textarea>
+                    <button type="submit" class="btn btn-outline-primary btn-sm">Submit Review</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if session.role == 'sender' and order.status not in ['delivered','cancelled'] %}
+        <form method="POST" action="{{ url_for('cancel_order', order_id=order.id) }}" onsubmit="return confirm('Cancel this order?');">
+            <button type="submit" class="btn btn-outline-danger w-100">Cancel Order</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <div class="col-md-5">
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h6>Live Route</h6>
+                <div id="route_map" class="map-box" style="height:280px;"></div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6>Status Timeline</h6>
+                <ul class="list-unstyled timeline mb-0">
+                    {% for log in status_log %}
+                    <li class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success"></i>
+                        <strong>{{ log.status.replace('_',' ')|title }}</strong>
+                        <br>
+                        <small class="text-muted">{{ log.created_at.strftime('%d %b, %I:%M %p') }}{% if log.note %} &mdash; {{ log.note }}{% endif %}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function initRouteMap() {
+    const pickup = { lat: {{ order.pickup_lat }}, lng: {{ order.pickup_lng }} };
+    const drop = { lat: {{ order.drop_lat }}, lng: {{ order.drop_lng }} };
+
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend(pickup);
+    bounds.extend(drop);
+
+    const map = new google.maps.Map(document.getElementById("route_map"), {
+        center: pickup,
+    });
+    map.fitBounds(bounds, 40);
+
+    new google.maps.Marker({
+        position: pickup,
+        map: map,
+        label: "P",
+        icon: { url: "https://maps.google.com/mapfiles/ms/icons/green-dot.png" },
+    });
+    new google.maps.Marker({
+        position: drop,
+        map: map,
+        label: "D",
+        icon: { url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png" },
+    });
+
+    new google.maps.Polyline({
+        path: [pickup, drop],
+        geodesic: true,
+        strokeColor: "#0d6efd",
+        strokeOpacity: 0.8,
+        strokeWeight: 3,
+        map: map,
+    });
+}
+</script>
+<script async defer
+    src="https://maps.googleapis.com/maps/api/js?key={{ GOOGLE_MAPS_API_KEY }}&callback=initRouteMap">
+</script>
+{% endblock %}
