@@ -25,7 +25,7 @@ os.makedirs(QR_FOLDER, exist_ok=True)
 DB_CONFIG = {
     "host": "localhost",
     "user": "root",
-    "password": "Shubham@#7633",
+    "password": "YOUR_PASSWORD",
     "database": "equipment_rental_db",
 }
 
